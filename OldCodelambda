@@ -21,10 +21,9 @@ def lambda_handler(event, context):
             ec2resource = boto3.resource('ec2', region_name=reg)
             snapshot = ec2resource.Snapshot(result['SnapshotId'])
              
-            # Find name tag for volume if it exists
             if 'Tags' in volume:
                 for tags in volume['Tags']:
                     if tags["Key"] == 'Name':
                         volumename = tags["DEVSERVER"]
-        
+                        
             snapshot.create_tags(Tags=[{'Key': 'Name','Value': volumename}])
