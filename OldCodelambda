@@ -1,0 +1,30 @@
+import boto3
+
+def lambda_handler(event, context):
+    ec2 = boto3.client('ec2')
+    
+    regions = ec2.describe_regions().get('Regions',[] )
+
+    for region in regions:
+        print "Dislay region %s " % region['RegionName']
+        reg=region['RegionName']
+
+        ec2 = boto3.client('ec2', region_name=reg)
+    
+        result = ec2.describe_volumes( Filters=[{'Name': 'status', 'Values': ['in-use']}])
+        
+        for volume in result['Volumes']:
+            print "Backing up %s in %s" % (volume['VolumeId'], volume['AvailabilityZone'])
+        
+            result = ec2.create_snapshot(VolumeId=volume['VolumeId'],Description='Lambda based function ebs')
+        
+            ec2resource = boto3.resource('ec2', region_name=reg)
+            snapshot = ec2resource.Snapshot(result['SnapshotId'])
+             
+            # Find name tag for volume if it exists
+            if 'Tags' in volume:
+                for tags in volume['Tags']:
+                    if tags["Key"] == 'Name':
+                        volumename = tags["DEVSERVER"]
+        
+            snapshot.create_tags(Tags=[{'Key': 'Name','Value': volumename}])
